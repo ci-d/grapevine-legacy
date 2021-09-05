@@ -33,21 +33,33 @@ namespace Grapevine.Server
         bool EnableThrowingExceptions { get; set; }
 
         /// <summary>
-        /// Gets or sets the host name used to create the HttpListener prefix, defaults to localhost
-        /// <para>&#160;</para>
-        /// Use "*" to indicate that the HttpListener accepts requests sent to the port if the requested URI does not match any other prefix. Similarly, to specify that the HttpListener accepts all requests sent to a port, replace the host element with the "+" character.
+        /// Gets or sets the Uniform Resource Identifier (URI) prefix used by the HttpListener.
+        /// Defaults to http://localhost:1234/
         /// </summary>
-        string Host { get; set; }
+        /// <remarks>
+        /// <para>
+        /// A URI prefix string is composed of a scheme (http or https), a host, an optional port, and an optional path.
+        /// An example of a complete prefix string is http://www.contoso.com:8080/customerData/.
+        /// Prefixes must end in a forward slash ("/").
+        /// The HttpListener object with the prefix that most closely matches a requested URI responds to the request.
+        /// Multiple HttpListener objects cannot add the same prefix; a Win32Exception exception is thrown if a HttpListener adds a prefix that is already in use.
+        /// </para>
+        /// <para>
+        /// When a port is specified, the host element can be replaced with "*" to indicate that the HttpListener accepts requests sent to the port if the requested URI does not match any other prefix.
+        /// For example, to receive all requests sent to port 8080 when the requested URI is not handled by any HttpListener, the prefix is http://*:8080/.
+        /// Similarly, to specify that the HttpListener accepts all requests sent to a port, replace the host element with the "+" character.
+        /// For example, https://+:8080. The "*" and "+" characters can be present in prefixes that include paths.
+        /// </para>
+        /// <para>
+        /// See <see cref="System.Net.HttpListener"/> for more information.
+        /// </para>
+        /// </remarks>
+        string ListenerPrefix { get; set; }
 
         /// <summary>
         /// Gets or sets the internal logger
         /// </summary>
         IGrapevineLogger Logger { get; set; }
-
-        /// <summary>
-        /// Gets or sets the port number (as a string) used to create the prefix used by the HttpListener for incoming traffic; defaults to 1234
-        /// </summary>
-        string Port { get; set; }
 
         /// <summary>
         /// Gets the default PublicFolder object to use for serving static content
@@ -65,14 +77,6 @@ namespace Grapevine.Server
         IRouter Router { get; set; }
 
         /// <summary>
-        /// Gets or sets a value indicating that the listner should use the https protocol instead of http
-        /// <para>&#160;</para>
-        /// Note that if you create an HttpListener using https, you must select a Server Certificate for the listener. See the MSDN documentation on the HttpListener class for more information.<br />
-        /// https://msdn.microsoft.com/en-us/library/system.net.httplistener(v=vs.110).aspx
-        /// </summary>
-        bool UseHttps { get; set; }
-
-        /// <summary>
         /// Clones the event handlers on to an <see cref="IRestServer"/> object, preserving order
         /// </summary>
         /// <param name="server">The <see cref="IRestServer"/> object to clone the events to</param>
@@ -81,6 +85,8 @@ namespace Grapevine.Server
 
     public class ServerSettings : IServerSettings
     {
+        private const string DefaultListenerPrefix = "http://localhost:1234/";
+
         public event ServerEventHandler AfterStarting;
         public event ServerEventHandler AfterStopping;
         public event ServerEventHandler BeforeStarting;
@@ -88,9 +94,7 @@ namespace Grapevine.Server
 
         public bool EnableThrowingExceptions { get; set; }
 
-        public string Host { get; set; }
-        public string Port { get; set; }
-        public bool UseHttps { get; set; }
+        public string ListenerPrefix { get; set; }
 
         public IGrapevineLogger Logger { get; set; }
         public IList<IPublicFolder> PublicFolders { get; }
@@ -99,12 +103,10 @@ namespace Grapevine.Server
 
         public ServerSettings()
         {
+            ListenerPrefix = DefaultListenerPrefix;
             PublicFolders = new List<IPublicFolder>();
-            Host = "localhost";
             Logger = NullLogger.GetInstance();
-            Port = "1234";
             Router = new Router();
-            UseHttps = false;
         }
 
         public IPublicFolder PublicFolder

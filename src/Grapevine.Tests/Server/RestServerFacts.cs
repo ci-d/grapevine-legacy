@@ -22,7 +22,6 @@ namespace Grapevine.Tests.Server
                 using (var server = new RestServer())
                 {
                     server.EnableThrowingExceptions.ShouldBeFalse();
-                    server.Host.ShouldBe("localhost");
                     server.IsListening.ShouldBeFalse();
                     server.ListenerPrefix.ShouldBe("http://localhost:1234/");
                     server.Logger.ShouldBeOfType<NullLogger>();
@@ -32,28 +31,26 @@ namespace Grapevine.Tests.Server
                     server.OnBeforeStop.ShouldBeNull();
                     server.OnStart.ShouldBeNull();
                     server.OnStop.ShouldBeNull();
-                    server.Port.ShouldBe("1234");
                     server.PublicFolders.Any().ShouldBeFalse();
                     server.PublicFolder.ShouldNotBeNull();
                     server.PublicFolders.Any().ShouldBeTrue();
                     server.Router.ShouldBeOfType<Router>();
-                    server.UseHttps.ShouldBeFalse();
                 }
             }
 
             [Fact]
             public void ForAction()
             {
-                const string port = "5555";
+                const string listenerPrefix = "http://127.0.0.1:5555/";
                 const string index = "default.htm";
 
                 using (var server = RestServer.For(_ =>
                 {
-                    _.Port = port;
-                    _.PublicFolder = new PublicFolder { IndexFileName = index};
+                    _.ListenerPrefix = listenerPrefix;
+                    _.PublicFolder = new PublicFolder { IndexFileName = index };
                 }))
                 {
-                    server.Port.ShouldBe(port);
+                    server.ListenerPrefix.ShouldBe(listenerPrefix);
                     server.PublicFolder.IndexFileName.ShouldBe(index);
                 }
             }
@@ -63,7 +60,7 @@ namespace Grapevine.Tests.Server
             {
                 using (var server = RestServer.For<CustomSettings>())
                 {
-                    server.Port.ShouldBe("5555");
+                    server.ListenerPrefix.ShouldBe("http://127.0.0.1:5555/");
                 }
             }
 
@@ -78,7 +75,7 @@ namespace Grapevine.Tests.Server
             }
         }
 
-        public class HostProperty
+        public class ListenerPrefixProperty
         {
             [Fact]
             public void ThrowsExceptionWhenChangingWhileListenerIsListening()
@@ -88,17 +85,18 @@ namespace Grapevine.Tests.Server
 
                 using (var server = new RestServer(listener))
                 {
-                    Should.Throw<ServerStateException>(() => server.Host = "something");
+                    Should.Throw<ServerStateException>(() => server.ListenerPrefix = "something");
                     listener.IsListening.Returns(false);
                 }
             }
 
             [Fact]
-            public void AllZerosSetsHostToPlusSign()
+            public void PlusSign()
             {
-                using (var server = new RestServer { Host = "0.0.0.0" })
+                var listenerPrefix = "https://+/";
+                using (var server = new RestServer { ListenerPrefix = listenerPrefix })
                 {
-                    server.Host.ShouldBe("+");
+                    server.ListenerPrefix.ShouldBe(listenerPrefix);
                 }
             }
         }
@@ -199,58 +197,6 @@ namespace Grapevine.Tests.Server
 
                     server.OnStop = null;
                     server.OnAfterStop.ShouldBeNull();
-                }
-            }
-        }
-
-        public class PortProperty
-        {
-            [Fact]
-            public void ThrowsExceptionWhenChangingWhileListenerIsListening()
-            {
-                var listener = Substitute.For<IHttpListener>();
-                listener.IsListening.Returns(true);
-                using (var server = new RestServer(listener))
-                {
-                    Should.Throw<ServerStateException>(() => server.Port = "5555");
-                    listener.IsListening.Returns(false);
-                }
-            }
-        }
-
-        public class UseHttpsProperty
-        {
-            [Fact]
-            public void ListenerPrefixBeginsWithHttpsWhenTrue()
-            {
-                using (var server = new RestServer())
-                {
-                    server.UseHttps = true;
-                    server.UseHttps.ShouldBeTrue();
-                    server.ListenerPrefix.StartsWith("https").ShouldBeTrue();
-                }
-            }
-
-            [Fact]
-            public void ListenerPrefixBeginsWithHttpsWhenFalse()
-            {
-                using (var server = new RestServer())
-                {
-                    server.UseHttps.ShouldBeFalse();
-                    server.ListenerPrefix.StartsWith("http").ShouldBeTrue();
-                    server.ListenerPrefix.StartsWith("https").ShouldBeFalse();
-                }
-            }
-
-            [Fact]
-            public void ThrowsExceptionWhenChangingWhileListenerIsListening()
-            {
-                var listener = Substitute.For<IHttpListener>();
-                listener.IsListening.Returns(true);
-                using (var server = new RestServer(listener))
-                {
-                    Should.Throw<ServerStateException>(() => server.UseHttps = true);
-                    listener.IsListening.Returns(false);
                 }
             }
         }
@@ -768,10 +714,10 @@ namespace Grapevine.Tests.Server
     {
         public CustomSettings()
         {
-            Port = "5555";
+            ListenerPrefix = "http://127.0.0.1:5555/";
             BeforeStarting += (s) =>
             {
-                s.UseHttps = true;
+                s.ListenerPrefix = "https://127.0.0.1:5555/";
             };
         }
     }

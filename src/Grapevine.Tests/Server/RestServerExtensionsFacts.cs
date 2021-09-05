@@ -14,13 +14,15 @@ namespace Grapevine.Tests.Server
             var stopped = new ManualResetEvent(false);
             var port = PortFinder.FindNextLocalOpenPort(1234);
 
-            using (var server = new RestServer { Port = port })
+            var listenerPrefix = $"http://localhost:{port}/";
+
+            using (var server = new RestServer { ListenerPrefix = listenerPrefix })
             {
                 server.OnAfterStop += () => { stopped.Set(); };
 
                 server.Start();
                 server.IsListening.ShouldBeTrue();
-                server.ListenerPrefix.ShouldBe($"http://localhost:{port}/");
+                server.ListenerPrefix.ShouldBe(listenerPrefix);
 
                 server.ThreadSafeStop();
                 stopped.WaitOne(300, false);

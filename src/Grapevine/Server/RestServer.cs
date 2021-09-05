@@ -29,11 +29,6 @@ namespace Grapevine.Server
         bool IsListening { get; }
 
         /// <summary>
-        /// Gets the prefix created by combining the Protocol, Host and Port properties into a scheme and authority
-        /// </summary>
-        string ListenerPrefix { get; }
-
-        /// <summary>
         /// Starts the server: executes OnBeforeStart, starts the HttpListener, then executes OnAfterStart if the HttpListener is listening
         /// </summary>
         void Start();
@@ -46,8 +41,6 @@ namespace Grapevine.Server
 
     public class RestServer : DynamicProperties, IRestServer
     {
-        private readonly UriBuilder _uriBuilder = new UriBuilder("http", "localhost", 1234, "/");
-
         private IGrapevineLogger _logger;
         protected bool IsStopping;
         protected bool IsStarting;
@@ -85,12 +78,11 @@ namespace Grapevine.Server
             StopEvent = new ManualResetEvent(false);
 
             options.CloneEventHandlers(this);
-            Host = options.Host;
-            Port = options.Port;
+
+            ListenerPrefix = options.ListenerPrefix;
             PublicFolders = options.PublicFolders;
             Router = options.Router;
             Logger = options.Logger;
-            UseHttps = options.UseHttps;
 
             Advanced = new AdvancedRestServer(Listener);
             Listener.IgnoreWriteExceptions = true;
@@ -112,16 +104,6 @@ namespace Grapevine.Server
         /// Provides direct access to selected methods and properties on the internal HttpListener instance in use; do not used unless you are fully aware of what you are doing and the consequences involved.
         /// </summary>
         public AdvancedRestServer Advanced { get; }
-
-        public string Host
-        {
-            get { return _uriBuilder.Host; }
-            set
-            {
-                if (IsListening) throw new ServerStateException();
-                _uriBuilder.Host = value == "0.0.0.0" ? "+" : value.ToLower();
-            }
-        }
 
         public bool IsListening => Listener?.IsListening ?? false;
 
@@ -147,15 +129,14 @@ namespace Grapevine.Server
             set { OnAfterStop = value; }
         }
 
-        public string ListenerPrefix => _uriBuilder.ToString();
-
-        public string Port
+        public string ListenerPrefix
         {
-            get { return _uriBuilder.Port.ToString(); }
+            get => Listener.Prefixes?.First();
             set
             {
                 if (IsListening) throw new ServerStateException();
-                _uriBuilder.Port = int.Parse(value);
+                Listener.Prefixes?.Clear();
+                Listener.Prefixes?.Add(value);
             }
         }
 
@@ -178,15 +159,6 @@ namespace Grapevine.Server
             }
         }
 
-        public bool UseHttps
-        {
-            get { return _uriBuilder.Scheme == "https"; }
-            set
-            {
-                if (IsListening) throw new ServerStateException();
-                _uriBuilder.Scheme = value ? "https" : "http";
-            }
-        }
 
         public void Start()
         {
@@ -199,8 +171,6 @@ namespace Grapevine.Server
                 OnBeforeStarting();
                 if (Router.RoutingTable.Count == 0) Router.ScanAssemblies();
 
-                Listener.Prefixes?.Clear();
-                Listener.Prefixes?.Add(ListenerPrefix);
                 Listener.Start();
 
                 if (!TestingMode) Listening.Start();

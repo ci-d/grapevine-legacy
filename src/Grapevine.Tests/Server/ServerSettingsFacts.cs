@@ -27,9 +27,7 @@ namespace Grapevine.Tests.Server
                 options.PublicFolder.ShouldNotBeNull();
                 options.PublicFolders.Any().ShouldBeTrue();
 
-                options.UseHttps.ShouldBeFalse();
-                options.Host.ShouldBe("localhost");
-                options.Port.ShouldBe("1234");
+                options.ListenerPrefix.ShouldBe("http://localhost:1234/");
                 options.EnableThrowingExceptions.ShouldBeFalse();
             }
         }
